@@ -63,7 +63,7 @@ export function writeText(path: string, text: string): void {
 // ---------- commands: init, goal, status (WP6) ----------
 
 /** File types ingest can read. Anything else in the source folder is left out of sources/. */
-export const SOURCE_EXTS = new Set(['.pdf', '.pptx', '.docx', '.md', '.markdown', '.txt', '.html', '.htm']);
+export const SOURCE_EXTS = new Set(['.pdf', '.pptx', '.docx', '.epub', '.md', '.markdown', '.txt', '.html', '.htm']);
 /** Never course material: licence/status notes that sit next to the real files (they would be cited otherwise). */
 export const SKIP_FILE = /^(licen[cs]e[^\\/]*\.(md|txt)|status\.md|~\$.*|\..*|thumbs\.db|desktop\.ini)$/i;
 const SKIP_DIR = new Set(['node_modules', '.git', OUT_DIR_NAME, 'crew', '.codebuddy', '.workbuddy', '.vscode', '__pycache__']);

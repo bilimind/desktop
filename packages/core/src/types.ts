@@ -38,7 +38,7 @@ export type Mark = typeof MARKS[number];
 /** PLAN §2.3: heuristic role of an input file (ingest/roles.ts). */
 export const FILE_ROLES = ['lecture', 'past_paper', 'syllabus', 'sop', 'other'] as const;
 export type FileRole = typeof FILE_ROLES[number];
-export const FILE_KINDS = ['pdf', 'pptx', 'docx', 'md', 'txt', 'html'] as const;
+export const FILE_KINDS = ['pdf', 'pptx', 'docx', 'epub', 'md', 'txt', 'html'] as const;
 export type FileKind = typeof FILE_KINDS[number];
 
 /** Checker rulings (PLAN §1.3, verdict.ts). */
