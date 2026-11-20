@@ -10,6 +10,7 @@ import { coursePaths, readJson, writeJson } from '../course.ts';
 import { extractPdf } from './pdf.ts';
 import { extractPptx } from './pptx.ts';
 import { extractDocx } from './docx.ts';
+import { extractEpub } from './epub.ts';
 import { extractText } from './text.ts';
 import { wordCount } from './tidy.ts';
 import { chunkSections } from './chunk.ts';
@@ -21,11 +22,12 @@ export { buildDigest, formatNoun, spread } from './digest.ts';
 export { detectRole, roleScores } from './roles.ts';
 export { extractPptxBuffer, drawingText } from './pptx.ts';
 export { htmlToSections } from './html.ts';
+export { extractEpubBuffer } from './epub.ts';
 export { markdownSections } from './text.ts';
 export { stripRepeatedLines } from './pdf.ts';
 
 const KIND_BY_EXT: Record<string, FileKind> = {
-  '.pdf': 'pdf', '.pptx': 'pptx', '.docx': 'docx', '.md': 'md', '.markdown': 'md', '.txt': 'txt', '.html': 'html', '.htm': 'html',
+  '.pdf': 'pdf', '.pptx': 'pptx', '.docx': 'docx', '.epub': 'epub', '.md': 'md', '.markdown': 'md', '.txt': 'txt', '.html': 'html', '.htm': 'html',
 };
 
 /** Files that are never course material: licences, status notes, temp/lock files, dotfiles. */
@@ -44,8 +46,9 @@ export const extractFile: ExtractFile = async absPath => {
     case 'pdf': return extractPdf(absPath);
     case 'pptx': return extractPptx(absPath);
     case 'docx': return extractDocx(absPath);
+    case 'epub': return extractEpub(absPath);
     case 'md': case 'txt': case 'html': return extractText(absPath, kind);
-    default: throw new BilimindError(`Unsupported file type: ${absPath}`, 'Use PDF, PPTX, DOCX, Markdown, TXT or HTML.');
+    default: throw new BilimindError(`Unsupported file type: ${absPath}`, 'Use PDF, PPTX, DOCX, EPUB, Markdown, TXT or HTML.');
   }
 };
 

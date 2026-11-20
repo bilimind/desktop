@@ -107,7 +107,7 @@ function guessRole(name: string, ext: string, abs: string): FolderFile['role'] {
   if (s.past_paper >= 4 && s.past_paper >= s.lecture && s.past_paper >= s.sop) return 'past_paper';
   if (s.sop >= 5 && s.sop >= s.lecture) return 'sop';
   if (TEXT_EXTS.has(ext) || /notes?\b/i.test(name)) return 'notes';
-  if (['.pdf', '.pptx', '.docx', '.html', '.htm'].includes(ext)) return 'lecture';
+  if (['.pdf', '.pptx', '.docx', '.epub', '.html', '.htm'].includes(ext)) return 'lecture';
   return 'other';
 }
 

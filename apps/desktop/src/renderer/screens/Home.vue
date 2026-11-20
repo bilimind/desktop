@@ -55,7 +55,7 @@ async function setFolder(path: string | null) {
     const r = await window.bilimind.inspectFolder(path);
     state.draft.files = r.files;
     if (!r.files.length) err.value = isStaged(path) ? 'BiliMind cannot read those files. Use PDF, Word, PowerPoint or text.'
-      : 'No files BiliMind can read in that folder (PDF, Word, PowerPoint, text).';
+      : 'No files BiliMind can read in that folder (PDF, EPUB, Word, PowerPoint, text).';
   } catch (e) { err.value = (e as Error).message; state.draft.files = []; }
 }
 async function pick() {

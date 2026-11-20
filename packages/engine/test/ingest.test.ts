@@ -4,18 +4,32 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  extractFile, chunkSections, chunkText, buildDigest, detectRole, ingest, readIngest, ingestFolder, sourceText,
+  extractFile, extractEpubBuffer, chunkSections, chunkText, buildDigest, detectRole, ingest, readIngest, ingestFolder, sourceText,
   titleFromName, titleFromMeta, isIgnoredSource, stripRepeatedLines, CHUNK_SIZE,
 } from '../src/ingest/index.ts';
 import { buildIndex, searchTerms, retrieveForLesson, lectureChunks, renderChunks } from '../src/retrieve.ts';
 import { makePdf, makePptx, tempDir, fakeCtx } from './wp1-helpers.ts';
 import type { SourceFile, Chunk } from '@bilimind/core';
+import { zipSync, strToU8 } from 'fflate';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SHOWCASE = join(here, '..', '..', '..', 'showcase', 'sources');
 const DS = join(SHOWCASE, 'ds-final');
 
 describe('extractors', () => {
+  it('EPUB follows the spine and turns XHTML chapters into sections', async () => {
+    const epub = zipSync({
+      'META-INF/container.xml': strToU8('<?xml version="1.0"?><container><rootfiles><rootfile full-path="OEBPS/content.opf"/></rootfiles></container>'),
+      'OEBPS/content.opf': strToU8('<package><metadata><dc:title>Test book</dc:title></metadata><manifest><item id="c1" href="ch1.xhtml" media-type="application/xhtml+xml"/><item id="c2" href="ch2.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="c2"/><itemref idref="c1"/></spine></package>'),
+      'OEBPS/ch1.xhtml': strToU8('<html><head><title>First</title></head><body><h1>First chapter</h1><p>Alpha.</p></body></html>'),
+      'OEBPS/ch2.xhtml': strToU8('<html><body><h1>Second chapter</h1><p>Beta.</p></body></html>'),
+    });
+    const ex = extractEpubBuffer(epub);
+    expect(ex.kind).toBe('epub');
+    expect(ex.title).toBe('Test book');
+    expect(ex.sections.map(s => s.locator)).toEqual(['Second chapter', 'First chapter']);
+    expect(ex.sections[0]!.text).toContain('Beta.');
+  });
   it('portrait PDF -> "Page N" sections; a text-less page is reported as scanned', async () => {
     const dir = tempDir();
     const f = join(dir, 'notes.pdf');

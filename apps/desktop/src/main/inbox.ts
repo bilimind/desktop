@@ -42,7 +42,7 @@ export async function pickFilesDialog(win: BrowserWindow | null): Promise<string
     title: 'Choose your files',
     properties: ['openFile', 'multiSelections'],
     filters: [
-      { name: 'Slides, documents and notes', extensions: [...SOURCE_EXTS].map(e => e.slice(1)) },
+      { name: 'Slides, documents, books and notes', extensions: [...SOURCE_EXTS].map(e => e.slice(1)) },
       { name: 'All files', extensions: ['*'] },
     ],
   };
