@@ -46,10 +46,22 @@ export const PRESETS: Record<ProviderId, ProviderPreset> = {
  * BiliMind free: no balance, 0. */
 export const DEFAULT_RESERVE_USD: Record<ProviderId, number> = { deepseek: 0, openrouter: 0, bilimind: 0 };
 
+/** BiliMind free switch. While it is paused (false), nothing picks the free service by default: a fresh install
+ * resolves to DeepSeek and asks for a key, and the desktop hides the option. BILIMIND_PROVIDER=bilimind still reaches
+ * it, and BILIMIND_FREE=1 / 0 overrides the switch (tests). Set it to true when desktop-api.bilimind.com answers
+ * completions again, together with data-free-tier="on" in site/index.html (see server/free-proxy/README.md). */
+export const FREE_TIER_ON = false;
+
+/** Whether BiliMind free is offered: BILIMIND_FREE=1 or 0, else FREE_TIER_ON. */
+export function freeTierOn(env: Record<string, string | undefined> = process.env): boolean {
+  const v = env.BILIMIND_FREE?.trim();
+  return v === '1' ? true : v === '0' ? false : FREE_TIER_ON;
+}
+
 /** The free service's default URL (overridable with BILIMIND_FREE_URL or config.json "free_base_url", for tests). */
 export const FREE_BASE_URL = PRESETS.bilimind.baseUrl;
 /** Sent as `X-BiliMind-Client: engine/<version>` when no BILIMIND_CLIENT (the desktop sets desktop/<app version>). */
-export const ENGINE_VERSION = '0.2.0';
+export const ENGINE_VERSION = '1.0.0';
 
 /** Providers that need the user's own key ('bilimind' never does). */
 export function needsKey(p: ProviderId): boolean {
@@ -70,7 +82,7 @@ export function clientHeader(env: Record<string, string | undefined> = process.e
 }
 
 /** PLAN §6.3: $0.25 per course run, $2.00 per day. */
-export const DEFAULT_CAPS = { runUsd: 0.25, dayUsd: 2 };
+export const DEFAULT_CAPS = { runUsd: 1, dayUsd: 2 };
 
 interface UserConfigFile {
   provider?: string;
@@ -166,12 +178,16 @@ export const loadConfig: LoadConfig = (opts = {}) => {
   };
 
   const forced = pick('BILIMIND_PROVIDER');
+  const free = freeTierOn(env);
+  // a named provider counts when it has its key, or when it is BiliMind free and the free tier is on
+  const usable = (p: ProviderId): boolean => (needsKey(p) ? !!keyFor(p).key : free);
   let provider: ProviderId;
   if (isProvider(forced)) provider = forced;
-  else if (isProvider(user.provider) && (!needsKey(user.provider) || keyFor(user.provider).key)) provider = user.provider;
+  else if (isProvider(user.provider) && usable(user.provider)) provider = user.provider;
   else if (keyFor('deepseek').key) provider = 'deepseek';
   else if (keyFor('openrouter').key) provider = 'openrouter';
-  else provider = isProvider(user.provider) ? user.provider : 'bilimind';   // fresh install: the free service
+  else if (isProvider(user.provider) && (needsKey(user.provider) || free)) provider = user.provider;
+  else provider = free ? 'bilimind' : 'deepseek';   // fresh install: the free service, or DeepSeek (asks for a key) while it is paused
 
   const preset = PRESETS[provider];
   const { key, source } = keyFor(provider);

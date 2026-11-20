@@ -3,11 +3,11 @@
 Thank you for helping. Bug reports, tests on your system, docs fixes and code are all welcome, and small pull
 requests are the easiest to review.
 
-- **Questions and ideas:** [Discussions](https://github.com/Odilient/bilimind-desktop/discussions).
-- **Bugs and concrete feature requests:** [issues](https://github.com/Odilient/bilimind-desktop/issues/new/choose).
+- **Questions and ideas:** [Discussions](https://github.com/bilimind/desktop/discussions).
+- **Bugs and concrete feature requests:** [issues](https://github.com/bilimind/desktop/issues/new/choose).
 - **Security problems:** not in public; see [SECURITY.md](SECURITY.md).
-- **A first task:** issues labelled [good first issue](https://github.com/Odilient/bilimind-desktop/labels/good%20first%20issue)
-  are small and self-contained; [help wanted](https://github.com/Odilient/bilimind-desktop/labels/help%20wanted) ones are bigger.
+- **A first task:** issues labelled [good first issue](https://github.com/bilimind/desktop/labels/good%20first%20issue)
+  are small and self-contained; [help wanted](https://github.com/bilimind/desktop/labels/help%20wanted) ones are bigger.
   Comment on an issue before you start, so two people don't build the same thing.
 
 Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
@@ -17,19 +17,17 @@ Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 You need Node.js 22 or newer (CI uses 24), Git and pnpm 10.
 
 ```bash
-git clone https://github.com/<you>/bilimind-desktop.git
-cd bilimind-desktop
+git clone https://github.com/<you>/desktop.git
+cd desktop
 corepack enable
 pnpm install
 pnpm start          # build everything and open the app
-pnpm dev            # the app with the renderer on Vite (hot reload) and the showcase courses in the library
 ```
 
 On Ubuntu 24.04 and later, run the development app with `ELECTRON_DISABLE_SANDBOX=1` (the OS blocks the user
 namespaces Chromium's sandbox needs; the packaged app handles this itself).
 
-You do not need an AI key to work on most of the code. The tests never call a provider, and the renderer runs in
-a browser with a mock that replays a recorded run: run `pnpm dev` and open the `renderer:` URL it prints.
+You do not need an AI key to work on most of the code. The tests never call a provider.
 
 ## Where things are
 
@@ -38,13 +36,12 @@ a browser with a mock that replays a recorded run: run `pnpm dev` and open the `
 | `packages/core` | Shared types, the course schema (`bilimind.course/1`), lesson archetypes and formats, graders, FSRS |
 | `packages/engine` | Ingest, outline, exam map, planner, drafts, checks, code tests, verdicts, narration, exports, build |
 | `packages/player` | The offline course page (Vue + Vite, built into one HTML file) |
-| `apps/desktop` | The Electron app: main process, preload, the worker that runs the engine, the Vue renderer. [CONTRACT.md](apps/desktop/CONTRACT.md) is the main-to-window API |
+| `apps/companion` | The Electron app: a Nuxt SPA exported from the hosted app, an in-process API on SQLite, a worker that runs the engine. [README](apps/companion/README.md) |
 | `apps/cli` | The `bilimind` command line; bundled into `skills/bilimind/scripts/bilimind.mjs` |
-| `skills/bilimind`, `workbuddy/` | The WorkBuddy skill and Expert Team |
+| `skills/bilimind` | A skill built on the CLI |
 | `server/free-proxy` | BiliMind free, the Cloudflare Worker behind `desktop-api.bilimind.com` |
 | `showcase/` | Sample source folders (with their licences) and the courses built from them |
 | `site/` | The website on GitHub Pages |
-| `hackathon/`, `pitch/`, `plan/` | History: the Dormathon entry, the pitch deck and the original plans |
 
 More: [docs/DEVELOPERS.md](docs/DEVELOPERS.md), [docs/how-it-works.md](docs/how-it-works.md),
 [docs/course-format.md](docs/course-format.md).
@@ -58,15 +55,15 @@ pnpm build
 node --test "skills/bilimind/test/*.test.mjs"
 ```
 
-CI runs the same on Linux, Windows and macOS, plus a hidden-window smoke test of the desktop app
-(`apps/desktop/scripts/e2e-main.mjs`; it needs a display, so on a Linux server use `xvfb-run -a`).
+CI runs the same on Linux, Windows and macOS, plus the app end to end on Linux
+(`apps/companion/test/e2e.mjs`, with nothing on screen and a fake AI provider).
 
-If you change the engine or the CLI, rebuild the bundled CLI and the Expert Team copy, and commit them with your
+If you change the engine or the CLI, rebuild the bundled CLI, and commit them with your
 change (the skill tests fail otherwise):
 
 ```bash
 cd apps/cli && node scripts/bundle.mjs && cd ../..
-node skills/bilimind/scripts/zip-skill.mjs --team
+node skills/bilimind/scripts/zip-skill.mjs
 ```
 
 ## How we write code here

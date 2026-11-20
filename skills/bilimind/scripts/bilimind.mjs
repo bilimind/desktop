@@ -75,6 +75,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+function freeTierOn(env = process.env) {
+  const v2 = env.BILIMIND_FREE?.trim();
+  return v2 === "1" ? true : v2 === "0" ? false : FREE_TIER_ON;
+}
 function needsKey(p2) {
   return PRESETS[p2].keyEnv !== "";
 }
@@ -157,7 +161,7 @@ function keyHint(p2) {
 function redact(text4) {
   return text4.replace(/\bsk-[A-Za-z0-9_\-]{4,}/g, "[redacted]").replace(/\*{2,}[A-Za-z0-9_\-]+/g, "[redacted]").replace(/\bBearer\s+\S+/gi, "Bearer [redacted]");
 }
-var PRESETS, DEFAULT_RESERVE_USD, FREE_BASE_URL, ENGINE_VERSION, DEFAULT_CAPS, loadConfig;
+var PRESETS, DEFAULT_RESERVE_USD, FREE_TIER_ON, FREE_BASE_URL, ENGINE_VERSION, DEFAULT_CAPS, loadConfig;
 var init_config = __esm({
   "../../packages/engine/src/config.ts"() {
     "use strict";
@@ -189,9 +193,10 @@ var init_config = __esm({
       }
     };
     DEFAULT_RESERVE_USD = { deepseek: 0, openrouter: 0, bilimind: 0 };
+    FREE_TIER_ON = false;
     FREE_BASE_URL = PRESETS.bilimind.baseUrl;
-    ENGINE_VERSION = "0.2.0";
-    DEFAULT_CAPS = { runUsd: 0.25, dayUsd: 2 };
+    ENGINE_VERSION = "1.0.0";
+    DEFAULT_CAPS = { runUsd: 1, dayUsd: 2 };
     loadConfig = (opts = {}) => {
       const env = opts.env ?? process.env;
       const home = env.USERPROFILE || env.HOME || homedir();
@@ -212,12 +217,15 @@ var init_config = __esm({
         return { key: "", source: "none" };
       };
       const forced = pick2("BILIMIND_PROVIDER");
+      const free = freeTierOn(env);
+      const usable = (p2) => needsKey(p2) ? !!keyFor(p2).key : free;
       let provider;
       if (isProvider(forced)) provider = forced;
-      else if (isProvider(user.provider) && (!needsKey(user.provider) || keyFor(user.provider).key)) provider = user.provider;
+      else if (isProvider(user.provider) && usable(user.provider)) provider = user.provider;
       else if (keyFor("deepseek").key) provider = "deepseek";
       else if (keyFor("openrouter").key) provider = "openrouter";
-      else provider = isProvider(user.provider) ? user.provider : "bilimind";
+      else if (isProvider(user.provider) && (needsKey(user.provider) || free)) provider = user.provider;
+      else provider = free ? "bilimind" : "deepseek";
       const preset = PRESETS[provider];
       const { key, source } = keyFor(provider);
       const um = user.models?.[provider] ?? {};
@@ -954,12 +962,14 @@ ${content.slice(0, 2e5)}`);
 function requestBody(cfg, model, messages, req, thinking) {
   const maxTokens = req.maxTokens ?? 32768;
   const temperature = req.temperature ?? 0.6;
+  const stream = req.onContent ? { stream: true, stream_options: { include_usage: true } } : {};
   if (cfg.provider === "deepseek") {
     const body2 = {
       model,
       messages,
       max_tokens: maxTokens,
       stream: false,
+      ...stream,
       response_format: { type: "json_object" },
       thinking: { type: thinking ? "enabled" : "disabled" }
     };
@@ -976,7 +986,8 @@ function requestBody(cfg, model, messages, req, thinking) {
     max_tokens: maxTokens,
     response_format: { type: "json_object" },
     usage: { include: true },
-    reasoning: { enabled: thinking }
+    reasoning: { enabled: thinking },
+    ...stream
   };
   if (model.startsWith("deepseek/")) body.provider = { require_parameters: true, max_price: { prompt: 0.2, completion: 0.4 }, allow_fallbacks: true };
   return body;
@@ -1041,6 +1052,54 @@ function checkAll(data, req) {
     return [`$: ${e2.message}`];
   }
 }
+async function readStreamedReply(res, req) {
+  let content = "";
+  let finish;
+  let usage;
+  let model;
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const onLine = (line) => {
+    if (!line.startsWith("data:")) return;
+    const raw = line.slice(5).trim();
+    if (!raw || raw === "[DONE]") return;
+    let chunk2;
+    try {
+      chunk2 = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    if (chunk2.error) throw new Error("provider error inside the stream");
+    if (chunk2.usage) usage = chunk2.usage;
+    if (typeof chunk2.model === "string" && chunk2.model) model = chunk2.model;
+    const choice = chunk2.choices?.[0];
+    if (choice?.finish_reason) finish = choice.finish_reason;
+    const thought = choice?.delta?.reasoning_content ?? choice?.delta?.reasoning;
+    if (typeof thought === "string" && thought) req.onThinking?.(thought);
+    const piece = choice?.delta?.content;
+    if (typeof piece === "string" && piece) {
+      content += piece;
+      req.onContent(content);
+    }
+  };
+  for (; ; ) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let i3;
+    while ((i3 = buffer.indexOf("\n")) >= 0) {
+      onLine(buffer.slice(0, i3).trim());
+      buffer = buffer.slice(i3 + 1);
+    }
+  }
+  if (buffer.trim()) onLine(buffer.trim());
+  return { choices: content ? [{ message: { content }, finish_reason: finish }] : [], usage, model };
+}
+function isCertError(e2) {
+  const err2 = e2;
+  return /CERT|SELF_SIGNED|UNABLE_TO_VERIFY|LEAF_SIGNATURE|certificate/i.test(`${err2?.code ?? ""} ${err2?.message ?? ""} ${err2?.cause?.code ?? ""} ${err2?.cause?.message ?? ""}`);
+}
 var configOverride, configMemo, DEEPSEEK_PRICES, OPENROUTER_PRICES, UNKNOWN_PRICE, isPlainObject, cpLen, typesOf, outputContract, corrective, budgetOverride, FAILURE, errorPos, sleep, backoffMs, MAX_ATTEMPTS, OPTIONAL_PARAMS, callJson;
 var init_llm = __esm({
   "../../packages/engine/src/llm.ts"() {
@@ -1100,7 +1159,7 @@ of the JSON object beats richness of its contents. Finish the closing brace.`;
     sleep = (ms2) => new Promise((r2) => setTimeout(r2, ms2));
     backoffMs = (attempt) => Math.min(4e3, 250 * 2 ** (attempt - 1));
     MAX_ATTEMPTS = 3;
-    OPTIONAL_PARAMS = [["response_format", /response[_ ]?format|json[_ ]?object|json mode/i], ["thinking", /thinking/i], ["reasoning_effort", /reasoning[_ ]?effort/i]];
+    OPTIONAL_PARAMS = [["stream_options", /stream[_ ]?options|include[_ ]?usage/i], ["response_format", /response[_ ]?format|json[_ ]?object|json mode/i], ["thinking", /thinking/i], ["reasoning_effort", /reasoning[_ ]?effort/i]];
     callJson = async (ctx, req) => {
       const cfg = activeConfig();
       const who = providerLabel(cfg.provider);
@@ -1141,20 +1200,26 @@ of the JSON object beats richness of its contents. Finish the closing brace.`;
       let lastFailure = null;
       let servedModel = model;
       const url2 = cfg.baseUrl + "/chat/completions";
-      const timeoutMs = Number(process.env.BILIMIND_LLM_TIMEOUT_MS) || 24e4;
+      const timeoutMs = Number(process.env.BILIMIND_LLM_TIMEOUT_MS) || (req.onContent ? 6e5 : 24e4);
+      let doFetch = fetch;
       while (attempts < MAX_ATTEMPTS) {
         attempts++;
         const chars = messages.reduce((n3, m2) => n3 + m2.content.length, 0);
         await checkBudget(ctx, cfg, estimateCost(cfg.provider, model, chars, maxTokens, thinking));
         let res;
         try {
-          res = await fetch(url2, {
+          res = await doFetch(url2, {
             method: "POST",
             headers: providerHeaders(cfg),
             body: JSON.stringify(withoutKeys(requestBody(cfg, model, messages, req, thinking), dropped)),
             signal: AbortSignal.timeout(timeoutMs)
           });
         } catch (e2) {
+          if (req.fallbackFetch && doFetch !== req.fallbackFetch && isCertError(e2)) {
+            doFetch = req.fallbackFetch;
+            attempts--;
+            continue;
+          }
           lastFailure = new BilimindError(FAILURE.transport, `${who} did not answer (${redact(e2.message).slice(0, 120)}). Run the command again.`);
           ctx.progress(`llm: ${req.stage} \xB7 attempt ${attempts} transport error`);
           await sleep(backoffMs(attempts));
@@ -1181,7 +1246,7 @@ of the JSON object beats richness of its contents. Finish the closing brace.`;
         }
         let body;
         try {
-          body = await res.json();
+          body = req.onContent ? await readStreamedReply(res, req) : await res.json();
         } catch {
           lastFailure = new BilimindError(FAILURE.http, "The reply was not JSON. Run the command again.");
           await sleep(backoffMs(attempts));
@@ -22579,15 +22644,15 @@ function parseNumber(value) {
 }
 function expectedOptionIds(item) {
   const k2 = item.answer_key ?? {};
-  for (const c2 of ["correct_option_ids", "correct", "option_ids", "accepted", "values"]) {
-    const ids = strList(k2[c2]);
+  for (const c2 of ["correct_option_ids", "correct_option_id", "option_ids", "option_id", "correct", "accepted", "values", "value", "ids", "id", "answer", "answers"]) {
+    const v2 = k2[c2];
+    const ids = (typeof v2 === "string" || typeof v2 === "number") && String(v2).trim() ? [String(v2).trim()] : strList(v2);
     if (ids.length) return [...new Set(ids)];
   }
-  for (const c2 of ["correct_option_id", "option_id", "value"]) {
-    const v2 = k2[c2];
-    if ((typeof v2 === "string" || typeof v2 === "number") && String(v2).trim()) return [String(v2).trim()];
-  }
-  return (item.options ?? []).filter((o2) => o2.correct === true).map((o2) => o2.id);
+  return (item.options ?? []).filter((o2) => {
+    const f2 = o2;
+    return (f2.correct ?? f2.is_correct) === true;
+  }).map((o2) => o2.id);
 }
 function expectedOrder(item) {
   const k2 = item.answer_key ?? {};
@@ -22602,8 +22667,12 @@ function expectedBlanks(item) {
   if (Array.isArray(k2.blanks)) {
     return k2.blanks.map((b3) => Array.isArray(b3) ? strList(b3) : b3 && typeof b3 === "object" ? strList(b3.accepted) : strList([b3])).filter((b3) => b3.length);
   }
-  const acc = strList(k2.accepted);
-  return acc.length ? [acc] : [];
+  for (const c2 of ["accepted", "answers", "correct", "value", "values", "text", "answer"]) {
+    const v2 = k2[c2];
+    const acc = (typeof v2 === "string" || typeof v2 === "number") && String(v2).trim() ? [String(v2).trim()] : strList(v2);
+    if (acc.length) return [acc];
+  }
+  return [];
 }
 function gradeMcq(item, optionId) {
   const expected = expectedOptionIds(item);
@@ -119501,7 +119570,7 @@ function resolveAssetsDir() {
     process.env.BILIMIND_ASSETS,
     join12(HERE, "..", "assets"),
     findUp("assets"),
-    findUp(join12("plan", "reference", "design", "hero-v7", "img", "11"), HERE, 8)
+    findUp(join12("packages", "player", "public", "img"), HERE, 8)
   ].filter((p2) => !!p2);
   return candidates.find((p2) => existsSync14(join12(p2, "obj-book.webp"))) ?? null;
 }

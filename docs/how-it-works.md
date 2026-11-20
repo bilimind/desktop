@@ -2,9 +2,9 @@
 
 BiliMind Desktop is an Electron app. You pick a folder, type one sentence and press Build. The app runs the
 BiliMind engine (`@bilimind/engine`, `runPipeline` in `packages/engine/src/run.ts`) on your own machine, in a
-separate worker process. The text-model calls go to BiliMind free (our open-source proxy, no key, the
-default) or straight to DeepSeek or OpenRouter with your own key. There is no account. The finished course
-is a normal folder under `Documents\BiliMind\`.
+separate worker process. The text-model calls go straight to DeepSeek or OpenRouter with your own key, or to BiliMind free (our
+open-source proxy, no key) while it is on; it is paused for now. There is no account. The finished course is a
+normal folder under `Documents/BiliMind/`.
 
 ## Inside the app
 
@@ -21,7 +21,7 @@ Renderer (Vue)  --window.bilimind-->  Main process  --utilityProcess.fork-->  Wo
 - The worker reports every step (who, what, how long, cost) as it happens; the building screen shows them in
   plain words, plus the plan (kept and cut topics) as soon as it exists.
 - The course is shown in the app from its own `index.html`, the same file you can open in any browser.
-- The exact interface between the window and the main process is in `apps/desktop/CONTRACT.md`.
+- The window talks to the main process through an in-process API on `app://bilimind/api/*` (`apps/companion/overlay/shell/src/api/`), with no port for anything else on the computer to reach.
 
 ## Two halves: judgement and rules
 
@@ -33,9 +33,8 @@ Renderer (Vue)  --window.bilimind-->  Main process  --utilityProcess.fork-->  Wo
 Every step appends one line to `crew/log.jsonl`, so `REPORT.md` and the course's receipts are computed from
 what actually ran.
 
-The same engine also runs as a CLI, which the WorkBuddy skill and Expert Team call (see the README). They
-are designed so that WorkBuddy's agents make the Lead's and the Checker's judgement calls in a visible
-transcript; in the desktop app the engine makes them unattended.
+The same engine also runs as a CLI, which the skill in `skills/bilimind` calls. In the desktop app the engine
+makes the Lead's and the Checker's judgement calls unattended.
 
 ## The pipeline
 
@@ -88,7 +87,7 @@ come from the team's existing BiliMind web app.
 - Broken JSON from the model is repaired locally (raw newlines and bad escapes in strings, miscounted
   brackets) before asking again. Replies that still cannot be decoded are saved to
   `crew/cache/bad-replies/` for diagnosis.
-- Spend caps: $0.25 per run and $2 per day by default (`caps` in `~/.bilimind/config.json`), plus a balance
+- Spend caps: $1 per course and $2 per day by default (`caps` in `~/.bilimind/config.json`), plus a balance
   floor (`reserve_usd`).
 
 ## Timing and cost (measured)

@@ -5,6 +5,55 @@ and the project uses [semantic versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-09
+
+The redesign from bilimind.com, on your computer: warm paper, Bili, and a calmer layout.
+
+### Added
+
+- The new look everywhere: Today, the chat, courses, lessons, notes, whiteboards and settings.
+- A tasks board (To do, Doing, Done) with priorities, steps and times, and a full calendar with week and month views.
+- Each course is one Path, with a Map or Weeks view and its dates in the corner.
+- Courses get an icon and a colour, and you can start a course or write a lesson yourself, without AI.
+- The interface in English, Spanish, French, Portuguese, Russian, Turkish and Uzbek.
+- Downloads of any page as Word, Markdown or a PDF.
+
+### Changed
+
+- The first check of a topic comes a day after you study it; after right answers the next waits a week, then a month.
+- The app icon is Bili.
+
+## [1.0.0]
+
+The desktop app is now the whole study companion, on your computer, with your own AI key. It replaces the earlier app.
+
+### Added
+
+- Chat, courses drafted from a chat, lessons, marking, history, notes, whiteboards, Today and a planner.
+- Checks from memory, readiness from those checks, and the comparison with your real grade.
+- Pasted announcements and exam timetable PDFs become suggested dates you confirm.
+- Build from a folder runs the earlier pipeline, Checker and report included, and brings the result in as a course.
+
+### Changed
+
+- The default spending limit is $1 a course (was $0.25). The daily limit stays at $2.
+- The repository is now github.com/bilimind/desktop.
+
+### Removed
+
+- The earlier Vue renderer, the WorkBuddy Expert Team package, and the event-era folders.
+
+## [0.2.1] - 2026-10-21
+
+### Changed
+
+- While BiliMind free is paused, the app no longer offers it. A fresh install asks for a DeepSeek or OpenRouter
+  key before the first build, says DeepSeek is the cheapest, and links to where you get each key. One switch,
+  `FREE_TIER_ON` in `packages/engine/src/config.ts`, brings the free tier back in the app and the CLI
+  ([server/free-proxy/README.md](server/free-proxy/README.md)).
+- The website says "free and open source, bring your own key", with the measured 2 to 9 cents a course, and notes
+  that BiliMind free is paused. `data-free-tier` on its `<html>` element flips the copy back.
+
 ## [0.2.0] - 2026-10-21
 
 The first release for macOS and Linux, and the first one built for contributors.
@@ -29,13 +78,12 @@ The first release for macOS and Linux, and the first one built for contributors.
 
 - Dates in your sentence ("Wednesday 9am") and the review calendar now use your computer's time zone in the
   desktop app. They were Malaysian time (`Asia/Kuala_Lumpur`) for everyone. The CLI keeps that default for now.
-- No balance reserve by default. The Dormathon build kept $3 (DeepSeek) and $4 (OpenRouter) back for its demo and
+- No balance reserve by default. The earlier build kept $3 (DeepSeek) and $4 (OpenRouter) back for its demo and
   refused calls below that; set `reserve_usd` in the config file to keep a floor.
 - Messages name the config file as it is on your system: `~/.bilimind/config.json` on macOS and Linux,
   `%USERPROFILE%\.bilimind\config.json` on Windows.
-- Installs from source use the public npm registry and Electron's GitHub downloads again (the Dormathon build
+- Installs from source use the public npm registry and Electron's GitHub downloads again (the earlier build
   pointed at a mirror because of the venue's firewall).
-- The README is rewritten for users and contributors; the Dormathon entry moved to [hackathon/README.md](hackathon/README.md).
 - Settings: the About text names the BiliMind team.
 
 ### Known issues
@@ -47,7 +95,7 @@ The first release for macOS and Linux, and the first one built for contributors.
 
 ## [0.1.0] - 2026-10-10
 
-The Dormathon 2026 build, for Windows (a portable `.exe` and an installer).
+The first build, for Windows (a portable `.exe` and an installer).
 
 - One sentence and a folder of files in, a narrated course out: a Lead that plans to your exam date and weighs the
   past paper, Writers in parallel, a Coder that runs every exercise, a Checker that re-solves every auto-marked
@@ -57,6 +105,7 @@ The Dormathon 2026 build, for Windows (a portable `.exe` and an installer).
 - BiliMind free (no key needed), DeepSeek and OpenRouter.
 - The `bilimind` CLI and the WorkBuddy skill and Expert Team.
 
-[Unreleased]: https://github.com/Odilient/bilimind-desktop/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/Odilient/bilimind-desktop/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/Odilient/bilimind-desktop/releases/tag/v0.1.0
+[Unreleased]: https://github.com/bilimind/desktop/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/bilimind/desktop/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/bilimind/desktop/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/bilimind/desktop/releases/tag/v0.1.0

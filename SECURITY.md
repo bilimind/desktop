@@ -4,7 +4,7 @@
 
 Please do not open a public issue for a security problem. Report it privately, in either of these ways:
 
-- **GitHub:** [report a vulnerability](https://github.com/Odilient/bilimind-desktop/security/advisories/new)
+- **GitHub:** [report a vulnerability](https://github.com/bilimind/desktop/security/advisories/new)
   (Security tab → "Report a vulnerability").
 - **Email:** [oybek@bilimind.com](mailto:oybek@bilimind.com), with "security" in the subject.
 
@@ -18,12 +18,12 @@ you publish details.
 ## Supported versions
 
 Security fixes go into the latest release. Please check that the problem is still there in the
-[latest version](https://github.com/Odilient/bilimind-desktop/releases/latest) before you report it.
+[latest version](https://github.com/bilimind/desktop/releases/latest) before you report it.
 
 ## In scope
 
-- The desktop app (`apps/desktop`): the boundary between the window and the main process (`window.bilimind`,
-  see [CONTRACT.md](apps/desktop/CONTRACT.md)), opening links and files, reading and writing outside the course
+- The desktop app (`apps/companion`): the boundary between the window and the main process (the in-process API on
+  `app://bilimind/api`, and `window.bilimind`), opening links and files, reading and writing outside the course
   and source folders, anything that would let a course page or a source file run code on your computer.
 - The engine and the CLI (`packages/engine`, `apps/cli`): key handling (a key must never be logged, printed,
   written into a course or sent anywhere but the provider), path handling, and the course files they write.
